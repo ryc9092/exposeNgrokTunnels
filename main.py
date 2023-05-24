@@ -1,20 +1,28 @@
 import logging
-import requests
-import yaml
 import smtplib
 import ssl
+
+from apscheduler.schedulers.blocking import BlockingScheduler
+import requests
+import yaml
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-log_handler = logging.FileHandler("/var/log/exposeNgrokTunnels.log")
-log_handler.setLevel(logging.INFO)
-log_handler.setFormatter(formatter)
+file_handler = logging.FileHandler("/var/log/exposeNgrokTunnels.log")
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(formatter)
 
-logger.addHandler(log_handler)
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+stream_handler.setFormatter(formatter)
 
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
+SCHEDULE_PERIOD_MINUTES = 5
 DEVICE_TUNNELS_FILE = "/tmp/exposeNgrokTunnels.yaml"
 EMAIL_CONCONFIG_FILE = "./emailConfiguration.yaml"
 NGROK_API_URL = "http://localhost:4040/api/tunnels"
@@ -76,14 +84,24 @@ def send_tunnels_info_email(ngrok_tunnels: list):
         logger.error(f"Failed to send ngrok tunnels info email: {e}")
 
 
+def do_expose_tunnels_work():
+    ngrok_tunnels_list = get_ngrok_tunnels_list()
+    device_tunnels_list = get_device_tunnels_list()
+
+    if (not device_tunnels_list) or (ngrok_tunnels_list != device_tunnels_list):
+        write_tunnels_info(ngrok_tunnels_list)
+        send_tunnels_info_email(ngrok_tunnels_list)
+
+
 if __name__ == "__main__":
     try:
-        ngrok_tunnels_list = get_ngrok_tunnels_list()
-        device_tunnels_list = get_device_tunnels_list()
+        logger.info(f"Start scheduler to expose ngrok tunnels...")
 
-        if (not device_tunnels_list) or (ngrok_tunnels_list != device_tunnels_list):
-            write_tunnels_info(ngrok_tunnels_list)
-            send_tunnels_info_email(ngrok_tunnels_list)
+        scheduler = BlockingScheduler()
+        scheduler.add_job(
+            do_expose_tunnels_work, "interval", minutes=SCHEDULE_PERIOD_MINUTES
+        )
+        scheduler.start()
 
     except Exception as e:
         logger.error(f"Failed to expose tunnels: {e}")

@@ -10,5 +10,5 @@ Use `~/.config/ngrok/ngrok.yml` to create multiple tunnels by command: `ngrok st
 
 ### Usage
 1. Get google app password for send email
-2. Edit sender, receiver, password in emailConfiguration.yaml
-3. Put the job to crontab: `*/5 * * * * cd /path/to/ExposeNgrokTunnels && python3 /path/to/ExposeNgrokTunnels/main.py`
+2. Edit emailConfiguration.yaml and add google app password to it
+3. Setup systemd service ExecStart=/path/to/python3 /path/to/main.py
