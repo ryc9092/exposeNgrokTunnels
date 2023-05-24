@@ -1,0 +1,9 @@
+---
+scheduler:
+  minutes: 5
+
+email:
+  smtp_server: "smtp.gmail.com"
+  sender: {{ sender }}
+  receiver: {{ receiver }}
+  password: {{ google_app_password }}
